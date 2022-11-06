@@ -1,0 +1,961 @@
+---
+title: '**FLIGHT CONNECTIVITY ACCESS TO THE MOST ANTI-SOCIAL COUNTRY IN SUB-SAHARAN AFRICA**'
+author:
+- George E. Quaye
+- gequaye@miners.utep.edu
+date: \center University of Texas, El Paso (UTEP)\center \center Department of Mathematical
+  Sciences \center
+output:
+  pdf_document:
+    toc: yes
+    number_sections: yes
+    toc_depth: '4'
+  bookdown::pdf_document2:
+    fig_caption: yes
+    keep_tex: yes
+    latex_engine: pdflatex
+    number_sections: yes
+    toc: yes
+    toc_depth: 4
+  html_document:
+    toc: yes
+    toc_depth: '4'
+    df_print: paged
+subtitle: Maths Application in Data Science Final Report
+affiliation: Department of Mathematical Sciences, University of Texas at El Paso
+header-includes:
+- \usepackage{float}
+- \usepackage{setspace}
+- \doublespacing
+- \usepackage{bm}
+- \usepackage{amsmath}
+- \usepackage{amssymb}
+- \usepackage{amsfonts}
+- \usepackage{amsthm}
+- \usepackage{fancyhdr}
+- \pagestyle{fancy}
+- \fancyhf{}
+- \rhead{George Quaye}
+- \lhead{Final Report}
+- \cfoot{\thepage}
+- \usepackage{algorithm}
+- \usepackage[noend]{algpseudocode}
+fig_caption: yes
+geometry: margin = 0.8in
+fontsize: 10pt
+bibliography: ./references.bib
+link-citations: yes
+linkcolor: blue
+always_allow_html: true
+---
+
+\newpage
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Abstract
+
+Airplanes are essential modes of transportation for both people and goods in today's completely globalized world. Almost everyone benefits from this cutting-edge transportation technology. As a result, having a broad awareness of global airline/airport connectivity is essential, as in knowing how many airlines fly to and from a specific airport in your jurisdiction. As a result, it is necessary to investigate or comprehend whether or not an anti-social country has any kind of flight connectivity globally or within the continent from which they originate. Given such continent, what impact does the country with the most flights connectivity has on this anti-social country and other countries on its continent. In order to address the project's main question, "Are there international flights for anti-social countries?" a graph network analysis was used. If so, where exactly are these connections? For the global network connectivity, a weighted and undirected graph network was obtained. A chosen anti-social country as such Burundi in the Sub-Saharan African geographical area, as well as its connectivity within the global network, were then extracted and observed. In addition, a table of cities, countries, and airports that offered such flight connectivity to the anti-social country was estimated. A graph of network centralities for Sub-Saharan African countries also aided in determining the influence Kenya, which had the largest airports and airlines in the region, has on the total flight connectivity network in the region. Graphical and tabular results suggested that Burundi, an anti-social country, may be reached by plane from four countries and cities: Belgium's Brussels in Europe, Uganda's Entebbe, Rwanda's Kigali, and Kenya's Nairobi in Africa's Sub-Saharan area. However, it was once again highlighted that the failure of Kenya's flight operation jeopardizes the entire flight connectivity in the Sub-Saharan area, rendering nations like Eritrea, Botswana, and Burundi non-functional in terms of flight connectivity, and affecting their economic activity at large.
+
+
+```{r ,message=FALSE, warning=FALSE, results='hide', echo=FALSE}
+library(data.table) 
+library(tidyverse) 
+library(plotly) 
+library(janitor) 
+library(stringr) 
+library(igraph)
+library(gridExtra)
+library(ggraph)
+library(DT)
+library(kableExtra)
+library(knitr)
+```
+
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+airport <- read_csv("airports-extended.csv", col_names = F)
+names(airport) <- c("Airpot_ID", "Airport_Name", "City", "Country", "IATA", 
+                 "ICAO", "Latitude", "Longitude", "Altitude", "Timezone", 
+                 "DST", "Tz", "Type", "Source")
+airport <- airport %>% 
+    filter(Type == "airport")
+airline <- read_csv("airlines.csv") %>% 
+    clean_names()
+route <- read_csv("routes.csv") %>% 
+    clean_names()
+names(route)[5] <- "destination_airport"
+
+countries <- read_csv("countries of the world.csv")
+```
+
+
+# Introduction
+
+This analysis seeks to understand flight connectivity access to the most anti-social country in Sub-Saharan Africa. Also, the effect of the most connected flight country on the Sub-Saharan Africa continent's network.
+
+## Background/rationale
+
+In today's completely globalized world, airplanes are critical modes of transportation for both people and products. This innovative transportation technology benefits almost everyone. As a result, having a broad understanding of worldwide airline/airport connectivity is critical, and knowing which number of airlines are going to and fro a given airport in your territory is also crucial. As a result, it is necessary to investigate or comprehend whether or not an anti-social country has any kind of flight connectivity globally and within the continent from which they originate, and if so, what impact does a country with the most flights have on this antisocial country and other neighboring countries on this continent given their productivity and economics growth. For this study, a Sub-Saharan African country was studied. Sub-Saharan Africa is the region of Africa south of the Sahara. It includes all African countries and territories that are wholly or partially south of the Sahara, according to the United Nations. Anti-social behaviors are actions that injure others or show a lack of concern for their well-being. It has also been characterized as any sort of activity that violates another person's basic rights, as well as any behavior that is considered disruptive to society. This can be done in a variety of ways, including, but not limited to, purposeful aggressiveness, and covert and overt animosity. Given such definitions, countries such as North Korea, Burundi, and several others were identified as the most anti-social countries globally. However, Burundi in the Sub-Saharan Africa continent was considered for this study.
+
+## Objectives	
+
+This report's main objective is to respond to the following research questions.
+
+*   Are there international flights for anti-social countries? If so, where exactly?   
+
+For a given anti-social country in the Sub-Saharan Africa continent, I investigated its global flight connectivity and identify specifically which airports, cities, and countries provide these connections.
+
+*   What effect does a Sub-Saharan African country with the most flight connectivity has on the entire Sub-Saharan Africa flight network?
+
+Using centrality measures, I selected the country with the most flight connectivity from a graph of the Sub-Saharan Africa flight network. Then I disconnected this country from the rest of the network to see how it affects the anti-social country and its neighbors.
+
+*   Is there any kind of community structure in the flight network in Sub-Saharan Africa, given the continent's flight connectivity?
+
+In examining various network structures, it is necessary to look for communities inside them. Community detection techniques are useful in this research to locate countries with common flight connections and keep them connected.
+                  
+**Other subsidiary questions that were answered in this report are;**
+        
+*   Globally, which country has the most airports?
+*   Globally, which country has the most airlines?
+*   What is the statistical relationship between the number of airports and airlines?
+
+
+## Data sources
+       
+Four different datasets were used for this analysis sourced from the following databases;   
+           
+*   Airport database.
+*   Flight route database.
+*   Airline database.
+*   Country database.  
+      
+All datasets and their descriptions were all downloaded and for it can assessed from [Openflights.org](https://openflights.org/data.html) under the Open Database license. OpenFlights is a service that allows users to map their flights across the world, search and filter them in a variety of ways, automatically calculate statistics, and share their flights and vacations with their friends and the rest of the world. The route data had `r dim(route)[1]` observations with `r dim(route)[2]` attritubes. The airline data had `r dim(airline)[1]` observations with `r dim(airline)[2]` attributes. The airport data had `r dim(airport)[1]` observations with `r dim(airport)[2]` attributes and the countries data provides information on population, region, area size, infant mortality and more as indicated in the table below. It had `r dim(countries)[1]` observations with `r dim(countries)[2]` attributes.
+
+<!-- ## Variables   -->
+
+<!-- Each data set had the following variable attributes defined as follows and each data table displays only the first 5 rows. -->
+
+<!-- ###   Airline data set  -->
+
+
+
+<!-- ```{r, echo=FALSE} -->
+<!-- airline %>%  -->
+<!--     head(5) %>%  -->
+<!--     kable(caption = "Airport data") %>%  -->
+<!--     kable_styling(bootstrap_options = c('striped', 'hover', 'responsive', 'condensed'), font_size = 12, latex_options = c("HOLD_position","scale_down")) -->
+<!-- ``` -->
+
+<!-- *   Airline ID: Unique OpenFlights identifier for this airline. -->
+<!-- *   Name: Name of the airline. -->
+<!-- *   Alias: Alias of the airline. For example, All Nippon Airways is commonly known as "ANA". -->
+<!-- *   IATA: 2-letter IATA code, if available. -->
+<!-- *   ICAO: 3-letter ICAO code, if available. -->
+<!-- *   Callsign: Airline callsign. -->
+<!-- *   Country: Country or territory where the airline is incorporated. -->
+<!-- *   Active: "Y" if the airline is or has until recently been operational, "N" if it is defunct. -->
+
+<!-- ###   Airport dataset -->
+
+
+
+<!-- ```{r, echo=FALSE} -->
+<!-- airport %>%  -->
+<!--     head(5) %>%  -->
+<!--     kable(caption = "Airport dataset") %>%  -->
+<!--     kable_styling(bootstrap_options = c('striped', 'hover', 'responsive', 'condensed'), font_size = 12, latex_options = c("HOLD_position", "scale_down")) -->
+<!-- ``` -->
+
+<!-- *   Airpot_ID: Airport ID Unique OpenFlights identifier for this airport. -->
+<!-- *   Airport_Name: Name of the airport. -->
+<!-- *   City: Main city served by an airport. May be spelled differently from Name. -->
+<!-- *   Country: Country or territory where the airport is located.  -->
+<!-- *   IATA: 3-letter IATA code. Null if not assigned/unknown. -->
+<!-- *   ICAO: 4-letter ICAO code. Null if not assigned. -->
+<!-- *   Latitude: Decimal degrees, usually to six significant digits. Negative is South, positive is North. -->
+<!-- *   Longitude: Decimal degrees, usually to six significant digits. Negative is West, positive is East. -->
+<!-- *   Altitude: Altitude In feet. -->
+<!-- *   Timezone: Hours offset from UTC. Fractional hours are expressed as decimals, eg. India is 5.5. -->
+<!-- *   DST: Daylight savings time. One of E (Europe), A (US/Canada), S (South America), O (Australia), Z (New Zealand), N (None) or U (Unknown). -->
+<!-- *   Tz: database time zone Timezone in “tz” (Olson) format, eg. “America/Los_Angeles”. -->
+<!-- *   Type: Type of the airport. Value “airport” for air terminals, “station” for train stations, “port” for ferry terminals and “unknown” if not known. -->
+<!-- *   Source: Source of this data. “OurAirports” for data sourced from OurAirports, “Legacy” for old data not matched to OurAirports (mostly DAFIF), “User” for unverified user contributions. In airports.csv, only source=OurAirports is included. -->
+
+<!-- ###   Route dataset            -->
+
+
+
+<!-- ```{r, echo=FALSE} -->
+<!-- route %>%  -->
+<!--     head(6) %>%  -->
+<!--     kable(caption = "Route dataset") %>%  -->
+<!--     kable_styling(bootstrap_options = c('striped', 'hover', 'responsive', 'condensed'), font_size = 12, latex_options = c("HOLD_position", "scale_down")) -->
+<!-- ``` -->
+
+<!-- *   airline: 2-letter (IATA) or 3-letter (ICAO) code of the airline. -->
+<!-- *   airline_id: Unique OpenFlights identifier for airline (see Airline). -->
+<!-- *   source_airport: 3-letter (IATA) or 4-letter (ICAO) code of the source airport. -->
+<!-- *   source_airport_id: Unique OpenFlights identifier for source airport (see Airport) -->
+<!-- *   destination_airport: 3-letter (IATA) or 4-letter (ICAO) code of the destination airport. -->
+<!-- *   destination_airport_id: Unique OpenFlights identifier for destination airport (see Airport) -->
+<!-- *   codeshare: “Y” if this flight is a codeshare (that is, not operated by Airline, but another carrier), empty otherwise. -->
+<!-- *   stops: Number of stops on this flight (“0” for direct) -->
+<!-- *   equipment: 3-letter codes for plane type(s) generally used on this flight, separated by spaces -->
+
+<!-- Note: Routes are directional: if an airline operates services from A to B and from B to A, both A-B and B-A are listed separately. Also, routes, where one carrier operates both its own and codeshare flights, are listed only once.[Openflights.org](https://openflights.org/data.html) -->
+
+<!-- ###   Countries data set     -->
+
+<!-- The countries data provides information on population, region, area size, infant mortality and more as indicated in the table below. It had `r dim(countries)[1]` observations with `r dim(countries)[2]` attributes. -->
+
+<!-- ```{r, echo=FALSE} -->
+<!-- countries %>%  -->
+<!--     head(6) %>%  -->
+<!--     kable(caption = "Countries dataset") %>%  -->
+<!--     kable_styling(bootstrap_options = c('striped', 'hover', 'responsive', 'condensed'), font_size = 12, latex_options = c("HOLD_position", "scale_down")) -->
+<!-- ``` -->
+     
+
+## Analysis approaches
+   
+In order to address the study questions, several descriptive graphs and tables were employed, noticeably graph network modeling (graphs and centralities) and traditional exploratory analysis using bar plots.
+ 
+### Data preparation
+     
+A thorough data cleaning and engineering was performed, with the goal of discovering and handling anomalous observations in all four data sets. For further analysis and reporting, the appropriate columns were chosen.
+       
+### Descriptives
+
+Bar plots were used for descriptive statistics and exploratory analysis of the data. This initial descriptive analysis aided in answering the subsidiary objective questions, such as globally which country has the most airports? which country has the most airlines? and the statistical relationship between airport and airline. 
+
+###   Main Analysis 
+The following criteria were utilized to investigate the main objective questions of this report:
+
+*   Anti-social international flight connectivity
+    
+In order to address the project's main question, "Are there international flights for anti-social countries?" a graph network analysis was used. If so, where exactly are these connections? For the global network connectivity, a weighted and undirected graph network was obtained. The chosen anti-social country, as well as its connectivity within the global network, were then extracted and observed. In addition, a table of cities, countries, and airports that offered such flight connectivity to the anti-social was estimated.              
+
+         
+###   Other Analysis
+      
+*   What effect does a Sub-Saharan Africa country with the most flight connectivity has on the entire Sub-Saharan Africa flight network?
+
+To investigate this, a directed graph network of flight country connectivity for the Sub-Saharan Africa continent was obtained. With this, I accessed the connectivity of the anti-social country to its neighboring countries. Centrality measures such as degree, betweenness, and Eigenvector were obtained for this network to aid in answering which Sub-Saharan African country has the most airports and most airlines graphically via bar plots. Again, with such an observation made, I examined the effect of this country on the entire flight connectivity network in Sub-Saharan Africa.
+
+*   Is there any kind of community structure in the flight network in Sub-Saharan Africa, given the continent's flight connectivity?
+    
+In this research, community detection was used to find groups with similar attributes and extract groups for various purposes from the entire graph obtained for the Sub-Saharan Africa continent. The following network community detection algorithms were used;
+
+\begin{itemize}
+\item Louvain Community Detection:
+
+This method is based on modularity, which aims to maximize the gap between a community's actual and a predicted number of edges. This algorithm involves two steps processes, and during this process, the Louvain community detection algorithm reveals clusters of communities. It is quite popular due to the algorithm's simplicity of implementation and quickness.
+
+\item Walktrap Community Detection: 
+
+Walktrap is also a community discovery method that uses random walks to assess the distance between vertices. According to the algorithm's main premise, random walks on a network tend to get stuck in heavily connected areas that correlate to communities. Just as in the case of Louvain community detection, the quality of the partitions under Walktrap can be determined by modularity measure. 
+
+\item Infomap Community Detection:
+
+A cost function is minimized by the Infomap algorithm. The flow caused by the layout of connections in a network is the basis for partitioning. Also, like the Louvain and the walktrap, this algorithm can also use modularity as a measure.
+\end{itemize}
+
+**Modularity**   
+     
+In an identical network with edges set at random, the number of edges falling within groups minus the expected number is modularity. It assumes values in the range of -1 to 1 and is used as an objective function to be maximized by some given community detection algorithms. A positive magnitude indicates the probability of a community structure, zero indicates edges are simply random distribution and a negative magnitude indicates that a community structure must not be present.
+
+# Results
+
+The results of exploratory data analysis and graphical network analysis are summarized in this section.
+
+##    Descriptives (Exploratory Analysis)
+
+There are a total of `r dim(airport)[1]` airports in the world, and total of `r dim(airline)[1]` airlines worldwide.
+
+```{r, echo=FALSE}
+route <- route %>% mutate(id = rownames(route))
+route <- route %>% gather('source_airport', 'destination_airport', key = "Airport_type", value = "Airport")
+gloabal.flight.route <- merge(route, airport %>% select(Airport_Name, IATA, Latitude, Longitude, Country, City),
+      by.x = "Airport", by.y = "IATA")
+```
+
+###   Which country has the most Airports, globally?
+```{r, echo=FALSE}
+connection.route <- route %>% 
+  spread(key = Airport_type, value = Airport) %>% 
+  select(destination_airport, source_airport, id)
+airport.country <- airport %>% 
+  select(City, Country, IATA)
+flight.connection <- merge(connection.route, airport.country, by.x = "source_airport", by.y = "IATA")
+names(flight.connection)[4:5] <- c("source.City", "source.Country")
+
+flight.connection <- merge(flight.connection, airport.country, by.x = "destination_airport", by.y = "IATA")
+names(flight.connection)[6:7] <- c("destination.City", "destination.Country")
+
+flight.connection <- flight.connection %>% 
+  select(id, contains("source"), contains("destination"))
+```
+
+```{r, echo=FALSE}
+data.frame(table(airport$Country)) %>% 
+  arrange(desc(Freq)) %>% 
+  head(10) %>% 
+  ggplot(aes(x = reorder(Var1, -Freq), y = Freq, fill = Var1, label = Freq)) + 
+  geom_bar(stat = "identity", show.legend = F) +
+  labs(title = "Top 10 Countries with the most Airports", 
+       x = "Country", y = "The number of Airports") +
+  geom_label(angle = 45, show.legend = F) +
+  theme(axis.text.x = element_text(angle = 40, size = 15))+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+         
+Indicated in the above plot shows that United States has by far the most airports, followed by Canada , Australia and so on. 
+    
+###    Which Country has the most Airlines, globally?
+```{r, echo=FALSE}
+data.frame(table(airline$country)) %>% 
+  arrange(desc(Freq)) %>% head(10) %>% 
+  ggplot(aes(x = reorder(Var1, -Freq), y = Freq, 
+             fill = Var1, label = Freq)) + 
+  geom_bar(stat = "identity", show.legend = F) +
+  geom_label(show.legend = F) +
+  theme(axis.text.x = element_text(angle = 40, size = 15)) +
+  labs(x = "Country", y = "The number of Airlines", 
+       title = "Top 10 Countries that have most airlines")+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+    
+Once again, it can be seen from above that the United States has a large number of airlines operating. However, certain nations, such as China and Brazil, did not rank among the top ten countries with most airlines, implying that such governments have airline restrictions.
+     
+###    Graphical or statistical relationship between the number of airports and airlines.
+```{r, echo=FALSE, warning= FALSE, message=FALSE}
+country.airport <- data.frame(table(airport$Country))
+names(country.airport)[2] <- "Airport"
+
+country.airline <- data.frame(table(airline$country))
+names(country.airline)[2] <- "Airline"
+
+lineports <- merge(country.airport, country.airline, by = "Var1")
+lineports %>% 
+  ggplot(aes(x = Airport, y = Airline)) + 
+  geom_point(show.legend = F) +
+  geom_smooth() + 
+  labs(title = "Relationship between Airports vs Airlines") +
+  scale_x_continuous(trans = 'log10',
+                     breaks = c(10, 100, 500, 1000))+
+  theme(plot.title =element_text(hjust = 0.5)) 
+```
+        
+The number of airports and the number of airlines in a given country appear to have a positive correlation (relationship). This means that countries with more airports have a higher likelihood of having a large number of airlines operating in them, which makes intuitive sense. 
+    
+##    Main Objective  
+
+Following a preliminary graphical study to identify countries with the most airlines and airports, it was discovered that apart from Africa all continents, had at least a country in the top 10 or 20. This prompted me to look into Africa's flight network as well as flight connections to the continent's most anti-social countries, noticeably Burundi in the Sub-Saharan area.
+
+###   Are there international flights for anti-social countries?
+
+```{r, echo=FALSE}
+NK.airport <- airport %>% filter(Country == "Burundi")
+NK.flight.connection <- flight.connection %>% 
+  filter(source.Country == "Burundi" | destination.Country == "Burundi")
+NK.gloabal.flight.route.id <- 
+  gloabal.flight.route %>% 
+  filter(Country == "Burundi") %>% select(id)
+
+NK.gloabal.flight.route.id <- NK.gloabal.flight.route.id$id %>% as.vector()
+
+NK.gloabal.flight.route.id <- 
+  gloabal.flight.route %>% filter(id %in% NK.gloabal.flight.route.id)
+
+```
+
+
+```{r, echo=FALSE}
+Flight.Country.Connection <- NK.flight.connection %>% 
+  select(contains("Country"), id)
+names(Flight.Country.Connection) <- c("From", "To", "id")
+Flight.Country.Connection <- Flight.Country.Connection %>% 
+  mutate(Combination = paste0(From, "-", To))
+Flight.Country.Connection <- Flight.Country.Connection %>% 
+  group_by(Combination) %>% 
+  mutate(Weight = NROW(Combination)) %>% 
+  arrange(-Weight) %>% 
+  ungroup()
+Flight.Country.Connection <- Flight.Country.Connection[!duplicated(Flight.Country.Connection$Combination),] %>% 
+  select(-id, -Combination)
+Flight.Country.graph <- graph_from_data_frame(Flight.Country.Connection, directed = FALSE)
+
+
+Flight.Country.graph$name <- "Flight Country Network"
+V(Flight.Country.graph)$id <- 1:vcount(Flight.Country.graph)
+
+set.seed(125)
+NW.Plot <- ggraph(Flight.Country.graph, layout = "kk") +
+  geom_edge_link(aes(alpha = Weight), 
+                 colour = "blue") +
+  geom_node_point(size = 5, colour = "green") +
+  geom_node_text(aes(label = name), repel = TRUE, size = 7) +
+  labs(title = "Airports & International Airlines to and fro in Burundi", x = "", y = "") +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        axis.line = element_blank(),
+        axis.text.x=element_blank(), axis.text.y=element_blank())+
+  theme(plot.title =element_text(hjust = 0.5)) 
+NW.Plot
+```
+
+The output of the graphical network indicates that Burundi has an airport with a few airlines operating there.
+
+**Airports that have flight access to Burundi**
+
+```{r, echo=FALSE}
+NK.gloabal.flight.route.id %>% 
+  filter(Country != "Burundi") %>% 
+  select(Airport_Name, Country, City, Latitude, Longitude) %>% 
+  distinct(City, .keep_all = T) %>% 
+  kable(caption = "Airports and cities with flight connection to Burundi") %>% 
+    kable_styling(bootstrap_options = c('striped', 'hover', 'responsive', 'condensed'), font_size = 12, latex_options = c("HOLD_position", "scale_down"))
+```
+         
+It turns out that Burundi is accessible by plane from four nations and cities. Belgium's Brussels, Uganda's Entebbe, Rwanda's Kigali, and Kenya's Nairobi are the four cities in which flights to Burundi are available. The number of airlines flying to Burundi is indicated by the edge weight. As can be seen, Kenya and Rwanda have more flights to Burundi than Uganda, which only has one flight.
+ 
+## Other Analysis
+
+###   Sub-saharan Africa Countries’ Flights Network      
+             
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.width=14, fig.height=10}
+set.seed(125)
+country.connection <- flight.connection %>% 
+  select(contains("Country")) %>% 
+  mutate(Link = paste0(source.Country, "-", destination.Country))
+country.connection <- country.connection[!duplicated(country.connection$Link),]
+names(country.connection) <- c("from", "to", "Link" )
+
+#### Selecting Asian Countries
+Country.list <- countries %>% 
+  select(Country, Region)
+Country.list$Country <- as.character(Country.list$Country)
+Asian.Country.list <- Country.list %>% 
+  filter(Region == "SUB-SAHARAN AFRICA") %>% 
+  head(28)
+Asian.Country <- Asian.Country.list$Country
+Asian.Country <- gsub(pattern = "\\, ", replacement = "", Asian.Country) %>% 
+  gsub(pattern = " ", replacement = "", Asian.Country) #%>% 
+  
+
+country.connection <- country.connection %>% 
+  filter(from %in% Asian.Country & to %in% Asian.Country) %>% 
+  select(-Link)
+
+country.connection <- country.connection %>% 
+  mutate(TF = str_detect(from, to)) %>% 
+  filter(TF == "FALSE") %>% 
+  select(-TF)
+g <- graph_from_data_frame(country.connection, directed = TRUE)
+V(g)$color <- ifelse(
+  V(g)$name == "Burundi", "red", "yellow"
+)
+
+plot(g, layout =  layout_with_dh(g),
+     edge.arrow.size=0.8,
+     vertex.size = 17, vertex.label.cex = 1)
+legend("topleft", legend = c("Most anti- social country", "Remaining Sub-Saharan Countries")
+       ,pt.cex=1.5, pt.bg = c("Red", "yellow"), pch = 21, cex = 1.0, 
+       bty = "n")
+
+```
+   
+Given the graph of Sub-Saharan Africa flight connection, it is clear that Burundi only has one direct linking country, Kenya.
+
+*   Centrality measures and analyses
+
+In this part, I looked at centrality measures including degree, betweenness, and eigenvector to see which Sub-Saharan African country has the most flight connections.
+
+```{r, echo=FALSE}
+eigen =eigen_centrality(g)$vector
+names(eigen)<- NULL        
+        
+d<-data.frame(degree=degree(g))
+centrality<- d %>% 
+  mutate(betweenness = round(betweenness(g),2)) %>%
+   mutate(eigen = round(eigen,3))%>% 
+  rownames_to_column(var = "Country")
+```  
+  
+```{r, echo=FALSE}
+centrality %>% 
+kable(caption = "Centrality measures") %>%
+  kable_styling(latex_options = "hold_position")
+    # kable_styling(bootstrap_options = c('striped', 'hover', 'responsive', 'condensed'), font_size = 10, latex_options = c("HOLD_position", "scale_down"))
+```
+
+```{r, echo=FALSE}
+centrality %>%
+  select(Country,degree )%>% 
+  arrange(desc(degree)) %>% 
+  head(10) %>% 
+  ggplot(aes(x = reorder(Country, -degree), y = degree, fill = Country, label = degree)) + 
+  geom_bar(stat = "identity", show.legend = F) +
+  labs(title = "Top 10 Countries with most flight connections in \n Sub-Saharan Africa base on Degree", 
+       x = "Country", y = "Degree Measure") +
+  geom_label(angle = 45, show.legend = F) +
+  theme(axis.text.x = element_text(angle = 40, size = 15))+
+  theme(plot.title =element_text(hjust = 0.5)) 
+```
+      
+```{r, echo=FALSE}
+centrality %>%
+  select(Country,betweenness)%>% 
+  arrange(desc(betweenness)) %>% 
+  head(10) %>% 
+  ggplot(aes(x = reorder(Country, -betweenness), y = betweenness, fill = Country, label = betweenness)) + 
+  geom_bar(stat = "identity", show.legend = F) +
+  labs(title = "Top 10 Countries with most flight connections in \n Sub-Saharan Africa base on betweenness", 
+       x = "Country", y = "Betweenness Measure") +
+  geom_label(angle = 45, show.legend = F) +
+  theme(axis.text.x = element_text(angle = 40, size = 15))+
+  theme(plot.title =element_text(hjust = 0.5))
+
+```    
+       
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+centrality %>%
+  select(Country,eigen)%>% 
+  arrange(desc(eigen)) %>% 
+  head(10) %>% 
+  ggplot(aes(x = reorder(Country, -eigen), y = eigen, fill = Country, label = eigen)) + 
+  geom_histogram(stat = "identity", show.legend = F) +
+  labs(title = "Top 10 Countries with most flight connections in \n Sub-Saharan Africa base eigen_vector", 
+       x = "Country", y = "Eigenvector Measure") +
+  geom_label(angle = 45, show.legend = F) +
+  theme(axis.text.x = element_text(angle = 40, size = 15))+
+  theme(plot.title =element_text(hjust = 0.5))
+```
+              
+According to the three centrality metrics, Kenya has the most flight connections in Sub-Saharan Africa, followed by Ethiopia.
+                                       
+###   Effect of Kenya on the entire Sub-Saharan flight network
+
+Again, because Kenya is the most connected flight country in Sub-Saharan Africa, I considered how it would affect the entire network in Sub-Saharan Africa if it becomes non-operational.
+   
+```{r, echo=FALSE, fig.width=14, fig.height=10}
+g_kenya<-delete_vertices(g, "Kenya")
+plot(g_kenya, edge.arrow.size=0.8,
+     vertex.size = 17, vertex.label.cex = 1.5) 
+legend("topright", legend = c("Most anti- social country", "Remaining Sub-Saharan Countries")
+       ,pt.cex=1.5, pt.bg = c("Red", "yellow"), pch = 21, cex = 1.0, 
+       bty = "n")
+```
+  
+The plot above shows that if Kenya is disconnected or non-operational, countries like Eritrea, Botswana, and Burundi will be severely impacted. This implies that such countries will not have flight connectivity inside Sub-Saharan Africa; nevertheless, other countries such as Belgium and Uganda may still have connectivity to Burundi.
+
+###   Community detection within the Sub-Saharan Africa's flight network
+
+Communities are referred to as groups, clusters, coherent subgroups, or modules; in a social network, community identification is defined as detecting sets of nodes where the connections between nodes within a set are greater than their connections to other network nodes. In this section, I investigate by three algorithms, if such groups are possible given the country flight connectivity of the Sub-Saharan Africa region.
+
+```{r,echo=FALSE, fig.width=14, fig.height=5}
+set.seed(125)
+g_dir <- graph_from_data_frame(country.connection, directed = FALSE)
+lc <- cluster_louvain(g_dir)
+imp<- cluster_infomap(g_dir)
+waltrap<- cluster_walktrap(g_dir)
+
+coords = layout_with_fr(g_dir)
+
+par(mfrow = c(1, 3))
+plot(g_dir, vertex.color=membership(lc), vertex.size = 10, layout=coords, main = "Louvain")
+plot(g_dir, vertex.color=membership(imp),vertex.size = 10, layout=coords, main = "Infomap")
+plot(g_dir, vertex.color=membership(waltrap), vertex.size = 10, layout=coords,main = "Walktrap")
+```
+  
+Each algorithm generates a community; nevertheless, it is necessary to ensure that these clusters are not simply edge randomness.  
+    
+```{r, echo=FALSE}
+set.seed(125)
+mod<- function(algorithm = ""){
+  mod<- round(modularity(algorithm), 3)
+  return(mod)
+}
+num<- function(alg=""){
+  n<-length(unique(alg$membership))
+  return(n)
+}
+data.frame(Algorithm = c("Louvain","Infomap", "Walktrap")) %>%
+  mutate(Communities = c(num(lc), num(imp), num(waltrap))) %>%
+  mutate(Modularity = c(mod(lc),mod(imp),mod(waltrap))) %>%
+  kable(caption = "Algorithms and Modularity measure") %>%
+  kable_styling(latex_options = "hold_position")
+    #kable_styling(font_size = 10, latex_options = c("HOLD_position", "scale_down"))
+```
+    
+Positive numbers for each algorithm in the table above suggest the likelihood of a community structure; however, their lesser values away from 1 and closer to 0 imply that these structures may be attributable to random edge distributions in the networks.
+
+
+# Discussion
+
+## Key results
+
+The United States was classified as the leading country in terms of airports and airlines by the descriptive, which is likely due to the United States' extensive military outposts around the world. Countries with larger regions, such as Russia and Canada, have numerous airports because they require connectivity to remote cities. The number of airports a country has is significantly influenced by its size and economy as well as the number of airports determines the number of available airlines in most cases. Again, In order to assess whether or not an anti-social country like Burundi in the Sub-Saharan Africa continents has any worldwide flight connectivity. Graphical and tabular results suggested that Burundi, an anti-social country, may be reached by plane from four countries and cities: Belgium's Brussels in Europe, Uganda's Entebbe, Rwanda's Kigali, and Kenya's Nairobi in Africa's Sub-Saharan area. Kenya was identified as the country with the most flight connectivity, or the country with the most airports and airline operations, in Sub-Saharan Africa. However, it was once again highlighted that the failure of Kenya's flight operation economy jeopardizes the entire flight connectivity in the Sub-Saharan area, rendering nations like Eritrea, Botswana, and Burundi non-functional in terms of flight connectivity. Countries with similar flight connectivity characteristics are detected as a group. Specifically, numerical findings showed that there is a probability of group existence; however, this presence could be attributable to the randomness of the airlines(edges) inside such structured communities.
+
+## Interpretation
+
+Burundi was ranked among the top ten least developed countries in the world by the United Nations (UN)[@eijdenberg2017explaining]. As previously discussed in this study, the extent of the connectivity, or the number of airports and airlines, is mostly determined by the country's economic development and geographical size. This provides more proof of Burundi's limited connectivity in the Sub-Saharan region and worldwide. It can also be argued that Burundi is not developing at a higher rate than other Sub-Saharan African nations such as Kenya and Ethiopia because of insufficient flight connectivity for the transportation of products and services to maximize productivity and growth of the economy.
+
+## Generalisability
+
+Even though Botswana and Eritrea are not among the top 20 most anti-social countries according to this study, however in terms of flight connectivity, these countries stand a chance of having the same faith as Burundi in terms of productivity and economic development should Kenya within the Sub-Saharan Africa continent go out of flight connectivity operation. The most recent pandemic epidemic, in which countries closed their borders to avoid flight operations, had a significant impact on Burundi, Eritrea, and Bostwana, as no airlines were operating in such underdeveloped countries.
+
+\newpage
+\section{Reference}
+
+<div id="refs"></div>
+
+\newpage
+\section{Appendix}
+\subsection{Codes}
+    
+Codes are available upon request!
+        
+
+<!-- ```{r ,message=FALSE, warning=FALSE, results='hide'} -->
+<!-- library(data.table)  -->
+<!-- library(tidyverse)  -->
+<!-- library(plotly)  -->
+<!-- library(janitor)  -->
+<!-- library(stringr)  -->
+<!-- library(igraph) -->
+<!-- library(gridExtra) -->
+<!-- library(ggraph) -->
+<!-- library(DT) -->
+<!-- library(kableExtra) -->
+<!-- library(knitr) -->
+<!-- ``` -->
+
+<!-- ```{r, message=FALSE, eval=FALSE, warning=FALSE} -->
+<!-- airport <- read_csv("airports-extended.csv", col_names = F) -->
+<!-- names(airport) <- c("Airpot_ID", "Airport_Name", "City", "Country", "IATA",  -->
+<!--                  "ICAO", "Latitude", "Longitude", "Altitude", "Timezone",  -->
+<!--                  "DST", "Tz", "Type", "Source") -->
+<!-- airport <- airport %>%  -->
+<!--     filter(Type == "airport") -->
+<!-- airline <- read_csv("airlines.csv") %>%  -->
+<!--     clean_names() -->
+<!-- route <- read_csv("routes.csv") %>%  -->
+<!--     clean_names() -->
+<!-- names(route)[5] <- "destination_airport" -->
+
+<!-- countries <- read_csv("countries of the world.csv") -->
+<!-- ``` -->
+
+<!-- ```{r, eval=FALSE} -->
+<!-- airline %>%  -->
+<!--     head(5) %>%  -->
+<!--     kable(caption = "Airport data") %>%  -->
+<!--     kable_styling(bootstrap_options = c('striped', 'hover', 'responsive',  -->
+<!-- 'condensed'), font_size = 12, latex_options = c("HOLD_position","scale_down")) -->
+<!-- ``` -->
+
+<!-- ```{r, eval=FALSE} -->
+<!-- airport %>%  -->
+<!--     head(5) %>%  -->
+<!--     kable(caption = "Airport dataset") %>%  -->
+<!--     kable_styling(bootstrap_options = c('striped', 'hover', 'responsive', -->
+<!-- 'condensed'), font_size = 12, latex_options = c("HOLD_position", "scale_down")) -->
+<!-- ``` -->
+
+<!-- ```{r, eval=FALSE} -->
+<!-- route %>%  -->
+<!--     head(6) %>%  -->
+<!--     kable(caption = "Route dataset") %>%  -->
+<!--     kable_styling(bootstrap_options = c('striped', 'hover', 'responsive',  -->
+<!-- 'condensed'), font_size = 12, latex_options = c("HOLD_position", "scale_down")) -->
+<!-- ``` -->
+
+
+<!-- ```{r, eval=FALSE} -->
+<!-- countries %>%  -->
+<!--     head(6) %>%  -->
+<!--     kable(caption = "Countries dataset") %>%  -->
+<!--     kable_styling(bootstrap_options = c('striped', 'hover', 'responsive',  -->
+<!-- 'condensed'), font_size = 12, latex_options = c("HOLD_position", "scale_down")) -->
+<!-- ``` -->
+
+<!-- ```{r, eval=FALSE} -->
+<!-- route <- route %>% mutate(id = rownames(route)) -->
+<!-- route <- route %>% gather('source_airport', 'destination_airport', key =  -->
+<!--                             "Airport_type", value = "Airport") -->
+<!-- gloabal.flight.route <- merge(route, airport %>% select(Airport_Name,  -->
+<!--                                   IATA, Latitude, Longitude, Country, City), -->
+<!--       by.x = "Airport", by.y = "IATA") -->
+<!-- ``` -->
+
+
+<!-- ```{r, eval=FALSE} -->
+<!-- connection.route <- route %>%  -->
+<!--   spread(key = Airport_type, value = Airport) %>%  -->
+<!--   select(destination_airport, source_airport, id) -->
+<!-- airport.country <- airport %>%  -->
+<!--   select(City, Country, IATA) -->
+<!-- flight.connection <- merge(connection.route, airport.country, by.x =  -->
+<!--                              "source_airport", by.y = "IATA") -->
+<!-- names(flight.connection)[4:5] <- c("source.City", "source.Country") -->
+
+<!-- flight.connection <- merge(flight.connection, airport.country, by.x =  -->
+<!--                              "destination_airport", by.y = "IATA") -->
+<!-- names(flight.connection)[6:7] <- c("destination.City", "destination.Country") -->
+
+<!-- flight.connection <- flight.connection %>%  -->
+<!--   select(id, contains("source"), contains("destination")) -->
+<!-- ``` -->
+
+<!-- ```{r, eval=FALSE} -->
+<!-- data.frame(table(airport$Country)) %>%  -->
+<!--   arrange(desc(Freq)) %>%  -->
+<!--   head(10) %>%  -->
+<!--   ggplot(aes(x = reorder(Var1, -Freq), y = Freq, fill = Var1, label = Freq)) +  -->
+<!--   geom_bar(stat = "identity", show.legend = F) + -->
+<!--   labs(title = "Top 10 Countries with the most Airports",  -->
+<!--        x = "Country", y = "The number of Airports") + -->
+<!--   geom_label(angle = 45, show.legend = F) + -->
+<!--   theme(axis.text.x = element_text(angle = 40, size = 15))+ -->
+<!--   theme(plot.title = element_text(hjust = 0.5)) -->
+<!-- ``` -->
+
+
+<!-- ```{r, eval=FALSE} -->
+<!-- data.frame(table(airline$country)) %>%  -->
+<!--   arrange(desc(Freq)) %>% head(10) %>%  -->
+<!--   ggplot(aes(x = reorder(Var1, -Freq), y = Freq,  -->
+<!--              fill = Var1, label = Freq)) +  -->
+<!--   geom_bar(stat = "identity", show.legend = F) + -->
+<!--   geom_label(show.legend = F) + -->
+<!--   theme(axis.text.x = element_text(angle = 40, size = 15)) + -->
+<!--   labs(x = "Country", y = "The number of Airlines",  -->
+<!--        title = "Top 10 Countries that have most airlines")+ -->
+<!--   theme(plot.title = element_text(hjust = 0.5)) -->
+<!-- ``` -->
+
+
+<!-- ```{r, eval=FALSE, warning= FALSE, message=FALSE} -->
+<!-- country.airport <- data.frame(table(airport$Country)) -->
+<!-- names(country.airport)[2] <- "Airport" -->
+
+<!-- country.airline <- data.frame(table(airline$country)) -->
+<!-- names(country.airline)[2] <- "Airline" -->
+
+<!-- lineports <- merge(country.airport, country.airline, by = "Var1") -->
+<!-- lineports %>%  -->
+<!--   ggplot(aes(x = Airport, y = Airline)) +  -->
+<!--   geom_point(show.legend = F) + -->
+<!--   geom_smooth() +  -->
+<!--   labs(title = "Relationship between Airports vs Airlines") + -->
+<!--   scale_x_continuous(trans = 'log10', -->
+<!--                      breaks = c(10, 100, 500, 1000))+ -->
+<!--   theme(plot.title =element_text(hjust = 0.5))  -->
+<!-- ``` -->
+
+
+<!-- ```{r, eval=FALSE} -->
+<!-- NK.airport <- airport %>% filter(Country == "Burundi") -->
+<!-- NK.flight.connection <- flight.connection %>%  -->
+<!--   filter(source.Country == "Burundi" | destination.Country == "Burundi") -->
+<!-- NK.gloabal.flight.route.id <-  -->
+<!--   gloabal.flight.route %>%  -->
+<!--   filter(Country == "Burundi") %>% select(id) -->
+
+<!-- NK.gloabal.flight.route.id <- NK.gloabal.flight.route.id$id %>% as.vector() -->
+
+<!-- NK.gloabal.flight.route.id <-  -->
+<!--   gloabal.flight.route %>% filter(id %in% NK.gloabal.flight.route.id) -->
+
+<!-- ``` -->
+
+
+<!-- ```{r, eval=FALSE} -->
+<!-- Flight.Country.Connection <- NK.flight.connection %>%  -->
+<!--   select(contains("Country"), id) -->
+<!-- names(Flight.Country.Connection) <- c("From", "To", "id") -->
+<!-- Flight.Country.Connection <- Flight.Country.Connection %>%  -->
+<!--   mutate(Combination = paste0(From, "-", To)) -->
+<!-- Flight.Country.Connection <- Flight.Country.Connection %>%  -->
+<!--   group_by(Combination) %>%  -->
+<!--   mutate(Weight = NROW(Combination)) %>%  -->
+<!--   arrange(-Weight) %>%  -->
+<!--   ungroup() -->
+<!-- Flight.Country.Connection <- Flight.Country.Connection[!duplicated -->
+<!--                                   (Flight.Country.Connection$Combination),] %>%  -->
+<!--   select(-id, -Combination) -->
+<!-- Flight.Country.graph <- graph_from_data_frame(Flight.Country.Connection,  -->
+<!--                                               directed = FALSE) -->
+
+
+<!-- Flight.Country.graph$name <- "Flight Country Network" -->
+<!-- V(Flight.Country.graph)$id <- 1:vcount(Flight.Country.graph) -->
+
+<!-- set.seed(125) -->
+<!-- NW.Plot <- ggraph(Flight.Country.graph, layout = "kk") + -->
+<!--   geom_edge_link(aes(alpha = Weight),  -->
+<!--                  colour = "blue") + -->
+<!--   geom_node_point(size = 5, colour = "green") + -->
+<!--   geom_node_text(aes(label = name), repel = TRUE, size = 7) + -->
+<!--   labs(title = "Airports & International Airlines to and fro in Burundi", x = "", y = "") + -->
+<!--   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), -->
+<!--         axis.line = element_blank(), -->
+<!--         axis.text.x=element_blank(), axis.text.y=element_blank())+ -->
+<!--   theme(plot.title =element_text(hjust = 0.5))  -->
+<!-- NW.Plot -->
+<!-- ``` -->
+
+
+<!-- ```{r, eval=FALSE} -->
+<!-- NK.gloabal.flight.route.id %>%  -->
+<!--   filter(Country != "Burundi") %>%  -->
+<!--   select(Airport_Name, Country, City, Latitude, Longitude) %>%  -->
+<!--   distinct(City, .keep_all = T) %>%  -->
+<!--   kable(caption = "Airports and cities with flight connection to Burundi") %>%  -->
+<!--     kable_styling(bootstrap_options = c('striped', 'hover', 'responsive',  -->
+<!-- 'condensed'), font_size = 12, latex_options = c("HOLD_position", "scale_down")) -->
+<!-- ``` -->
+
+
+<!-- ```{r, eval=FALSE, warning=FALSE, message=FALSE} -->
+<!-- set.seed(125) -->
+<!-- country.connection <- flight.connection %>%  -->
+<!--   select(contains("Country")) %>%  -->
+<!--   mutate(Link = paste0(source.Country, "-", destination.Country)) -->
+<!-- country.connection <- country.connection[!duplicated(country.connection$Link),] -->
+<!-- names(country.connection) <- c("from", "to", "Link" ) -->
+
+<!-- #### Selecting Asian Countries -->
+<!-- Country.list <- countries %>%  -->
+<!--   select(Country, Region) -->
+<!-- Country.list$Country <- as.character(Country.list$Country) -->
+<!-- Asian.Country.list <- Country.list %>%  -->
+<!--   filter(Region == "SUB-SAHARAN AFRICA") %>%  -->
+<!--   head(28) -->
+<!-- Asian.Country <- Asian.Country.list$Country -->
+<!-- Asian.Country <- gsub(pattern = "\\, ", replacement = "", Asian.Country) %>%  -->
+<!--   gsub(pattern = " ", replacement = "", Asian.Country)  -->
+
+<!-- country.connection <- country.connection %>%  -->
+<!--   filter(from %in% Asian.Country & to %in% Asian.Country) %>%  -->
+<!--   select(-Link) -->
+
+<!-- country.connection <- country.connection %>%  -->
+<!--   mutate(TF = str_detect(from, to)) %>%  -->
+<!--   filter(TF == "FALSE") %>%  -->
+<!--   select(-TF) -->
+<!-- g <- graph_from_data_frame(country.connection, directed = TRUE) -->
+<!-- V(g)$color <- ifelse( -->
+<!--   V(g)$name == "Burundi", "red", "yellow" -->
+<!-- ) -->
+
+<!-- plot(g, layout =  layout_with_dh(g), -->
+<!--      edge.arrow.size=0.8, -->
+<!--      vertex.size = 17, vertex.label.cex = 1) -->
+
+<!-- ``` -->
+
+
+<!-- ```{r, eval=FALSE} -->
+<!-- eigen =eigen_centrality(g)$vector -->
+<!-- names(eigen)<- NULL         -->
+
+<!-- d<-data.frame(degree=degree(g)) -->
+<!-- centrality<- d %>%  -->
+<!--   mutate(betweenness = round(betweenness(g),2)) %>% -->
+<!--    mutate(eigen = round(eigen,3))%>%  -->
+<!--   rownames_to_column(var = "Country") -->
+<!-- ```   -->
+
+<!-- ```{r, eval=FALSE} -->
+<!-- centrality %>%  -->
+<!-- kable(caption = "Centrality measures") %>% -->
+<!--   kable_styling(latex_options = "hold_position") -->
+<!-- ``` -->
+
+<!-- ```{r, eval=FALSE} -->
+<!-- centrality %>% -->
+<!--   select(Country,degree )%>%  -->
+<!--   arrange(desc(degree)) %>%  -->
+<!--   head(10) %>%  -->
+<!--   ggplot(aes(x = reorder(Country, -degree), y = degree,  -->
+<!--              fill = Country, label = degree)) +  -->
+<!--   geom_bar(stat = "identity", show.legend = F) + -->
+<!--   labs(title = "Top 10 Countries with most flight connections in \n Sub-Saharan  -->
+<!--        Africa base on Degree",  -->
+<!--        x = "Country", y = "The number of Airports") + -->
+<!--   geom_label(angle = 45, show.legend = F) + -->
+<!--   theme(axis.text.x = element_text(angle = 40, size = 15))+ -->
+<!--   theme(plot.title =element_text(hjust = 0.5))  -->
+<!-- ``` -->
+
+<!-- ```{r, eval=FALSE} -->
+<!-- centrality %>% -->
+<!--   select(Country,betweenness)%>%  -->
+<!--   arrange(desc(betweenness)) %>%  -->
+<!--   head(10) %>%  -->
+<!--   ggplot(aes(x = reorder(Country, -betweenness), y = betweenness,  -->
+<!--              fill = Country, label = betweenness)) +  -->
+<!--   geom_bar(stat = "identity", show.legend = F) + -->
+<!--   labs(title = "Top 10 Countries with most flight connections in \n Sub-Saharan  -->
+<!--        Africa base on betweenness",  -->
+<!--        x = "Country", y = "The number of Airports") + -->
+<!--   geom_label(angle = 45, show.legend = F) + -->
+<!--   theme(axis.text.x = element_text(angle = 40, size = 15))+ -->
+<!--   theme(plot.title =element_text(hjust = 0.5)) -->
+
+<!-- ```     -->
+
+<!-- ```{r, eval=FALSE, warning=FALSE, message=FALSE} -->
+<!-- centrality %>% -->
+<!--   select(Country,eigen)%>%  -->
+<!--   arrange(desc(eigen)) %>%  -->
+<!--   head(10) %>%  -->
+<!--   ggplot(aes(x = reorder(Country, -eigen), y = eigen,  -->
+<!--              fill = Country, label = eigen)) +  -->
+<!--   geom_histogram(stat = "identity", show.legend = F) + -->
+<!--   labs(title = "Top 10 Countries with most flight connections in \n Sub-Saharan  -->
+<!--        Africa base eigen_vector",  -->
+<!--        x = "Country", y = "The number of Airports") + -->
+<!--   geom_label(angle = 45, show.legend = F) + -->
+<!--   theme(axis.text.x = element_text(angle = 40, size = 15))+ -->
+<!--   theme(plot.title =element_text(hjust = 0.5)) -->
+<!-- ``` -->
+
+<!-- ```{r, eval=FALSE} -->
+<!-- g_kenya<-delete_vertices(g, "Kenya") -->
+
+<!-- plot(g_kenya, edge.arrow.size=0.8, -->
+<!--      vertex.size = 17, vertex.label.cex = 1)  -->
+<!-- ``` -->
+
+<!-- ```{r, eval=FALSE} -->
+<!-- set.seed(125) -->
+
+<!-- g_dir <- graph_from_data_frame(country.connection, directed = FALSE) -->
+<!-- lc <- cluster_louvain(g_dir) -->
+<!-- imp<- cluster_infomap(g_dir) -->
+<!-- #edbt<-cluster_edge_betweenness(g_dir) -->
+<!-- waltrap<- cluster_walktrap(g_dir) -->
+
+<!-- mod<- function(algorithm = ""){ -->
+<!--   mod<- round(modularity(algorithm), 3) -->
+<!--   return(mod) -->
+<!-- } -->
+<!-- num<- function(alg=""){ -->
+<!--   n<-length(unique(alg$membership)) -->
+<!--   return(n) -->
+<!-- } -->
+<!-- data.frame(Algorithm = c("Louvain","Infomap", "Walktrap")) %>% -->
+<!--   mutate(Communities = c(num(lc), num(imp), num(waltrap))) %>% -->
+<!--   mutate(Modularity = c(mod(lc),mod(imp),mod(waltrap))) %>% -->
+<!--   kable(caption = "Algorithms and Modularity measure") %>% -->
+<!--   kable_styling(latex_options = "hold_position") -->
+<!-- ``` -->
+
+
+
+
